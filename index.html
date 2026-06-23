@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>明日方舟：罗德岛日常</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        #game-container {
+            width: 960px;
+            height: 540px;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+        #background {
+            position: absolute;
+            width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+        .character {
+            position: absolute;
+            bottom: 0;
+            height: 80%;
+            transition: all 0.5s ease;
+        }
+        #char-left { left: 5%; }
+        #char-right { right: 5%; }
+        #dialogue-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: rgba(0,0,0,0.85);
+            border: 2px solid #4a90d9;
+            border-radius: 10px;
+            padding: 15px 20px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        #speaker-name { color: #4a90d9; font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+        #dialogue-text { color: #fff; font-size: 16px; line-height: 1.6; min-height: 50px; }
+        #next-indicator { position: absolute; bottom: 10px; right: 15px; color: #4a90d9; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+        #choices { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: flex; flex-direction: column; gap: 15px; z-index: 20; }
+        .choice-btn { padding: 12px 35px; background: rgba(0,0,0,0.9); border: 2px solid #4a90d9; color: #fff; font-size: 16px; cursor: pointer; border-radius: 5px; transition: all 0.3s; }
+        .choice-btn:hover { background: #4a90d9; transform: scale(1.05); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="background"></div>
+        <div id="char-left" class="character"></div>
+        <div id="char-right" class="character"></div>
+        <div id="dialogue-box">
+            <div id="speaker-name">阿米娅</div>
+            <div id="dialogue-text">博士，欢迎回到罗德岛。</div>
+            <div id="next-indicator">▼</div>
+        </div>
+        <div id="choices" class="hidden"></div>
+    </div>
+<script>
+const story = [
+    { speaker: "阿米娅", text: "博士，欢迎回到罗德岛。今天的工作已经准备好了。", bg: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=960&h=540&fit=crop", left: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=500&fit=crop" },
+    { speaker: "博士", text: "阿米娅，今天有什么特别的安排吗？" },
+    { speaker: "阿米娅", text: "凯尔希医生在医疗部等您，说是有重要的事情要商量。" },
+    { speaker: "系统", text: "【请选择你的行动】", choices: [
+        { text: "前往医疗部见凯尔希", next: 4 },
+        { text: "先去训练室看看", next: 5 }
+    ]},
+    { speaker: "凯尔希", text: "博士，你来了。关于源石病的最新研究，我有些发现要告诉你。", bg: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=960&h=540&fit=crop", left: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=500&fit=crop", right: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=500&fit=crop" },
+    { speaker: "系统", text: "【第一章 结束】", end: true },
+    { speaker: "训练室", text: "这里暂时用占位图展示训练室场景...", bg: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=960&h=540&fit=crop", end: true }
+];
+let i = 0, typing = false, timer = null;
+const bg = document.getElementById('background'), cl = document.getElementById('char-left'), cr = document.getElementById('char-right'), sn = document.getElementById('speaker-name'), dt = document.getElementById('dialogue-text'), ch = document.getElementById('choices');
+function show(s) {
+    if (s.bg) bg.style.backgroundImage = `url(${s.bg})`;
+    if (s.left) { cl.style.backgroundImage = `url(${s.left})`; cl.style.display = 'block'; } else cl.style.display = 'none';
+    if (s.right) { cr.style.backgroundImage = `url(${s.right})`; cr.style.display = 'block'; } else cr.style.display = 'none';
+    sn.textContent = s.speaker || '';
+    if (s.text) type(s.text);
+    if (s.choices) { ch.innerHTML = ''; ch.classList.remove('hidden'); s.choices.forEach(c => { const b = document.createElement('button'); b.className = 'choice-btn'; b.textContent = c.text; b.onclick = () => { ch.classList.add('hidden'); i = c.next; show(story[i]); }; ch.appendChild(b); }); } else ch.classList.add('hidden');
+}
+function type(t) { typing = true; dt.textContent = ''; let n = 0; clearInterval(timer); timer = setInterval(() => { dt.textContent += t[n]; n++; if (n >= t.length) { clearInterval(timer); typing = false; } }, 40); }
+document.getElementById('dialogue-box').onclick = () => {
+    if (typing) { clearInterval(timer); dt.textContent = story[i].text; typing = false; }
+    else if (!story[i].choices && !story[i].end) { i++; if (i < story.length) show(story[i]); }
+};
+show(story[0]);
+</script>
+</body>
+</html>
